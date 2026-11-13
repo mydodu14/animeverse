@@ -1,0 +1,98 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANIMEVERSE</title>
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+</head>
+
+<body>
+
+    <header class="navbar">
+        <a href="/" class="logo">ANIME<span>VERSE</span></a>
+
+        <nav>
+            <a href="#accueil">Accueil</a>
+            <a href="#catalogue">Catalogue</a>
+            <a href="#favoris">Favoris</a>
+        </nav>
+
+        <div class="nav-actions">
+            <input
+                type="search"
+                id="animeSearch"
+                placeholder="Rechercher un anime..."
+            >
+            <button id="searchButton">⌕</button>
+        </div>
+    </header>
+
+    <main>
+
+        <section class="hero" id="accueil">
+            <div class="hero-content">
+                <p class="hero-label">BIENVENUE SUR ANIMEVERSE</p>
+                <h1>Ton univers <span>Anime</span></h1>
+                <p>
+                    Découvre des milliers d'univers,
+                    de personnages et d'histoires.
+                </p>
+                <a href="#catalogue" class="hero-button">
+                    Explorer les animes
+                </a>
+            </div>
+        </section>
+
+        <section class="catalogue section" id="catalogue">
+            <div class="section-heading">
+                <div>
+                    <p class="section-label">EXPLORE TON UNIVERS</p>
+                    <h2>Catalogue Anime</h2>
+                </div>
+            </div>
+
+            <div class="filters">
+                <button class="filter active" data-genre="all">Tous</button>
+                <button class="filter" data-genre="Action">Action</button>
+                <button class="filter" data-genre="Adventure">Aventure</button>
+                <button class="filter" data-genre="Comedy">Comédie</button>
+                <button class="filter" data-genre="Drama">Drame</button>
+                <button class="filter" data-genre="Fantasy">Fantasy</button>
+                <button class="filter" data-genre="Romance">Romance</button>
+                <button class="filter" data-genre="Horror">Horreur</button>
+            </div>
+
+            <div id="animeGrid" class="anime-grid">
+                <p class="loading">Chargement des animes...</p>
+            </div>
+        </section>
+
+        <section class="section favorites-section" id="favoris">
+            <div class="section-heading">
+                <div>
+                    <p class="section-label">TA COLLECTION</p>
+                    <h2>Mes favoris ♥</h2>
+                </div>
+            </div>
+
+            <div id="favoritesGrid" class="anime-grid">
+                <p class="empty-message">
+                    Tes favoris apparaîtront ici.
+                </p>
+            </div>
+        </section>
+
+    </main>
+
+    <footer>
+        <a href="/" class="logo">ANIME<span>VERSE</span></a>
+        <p>Découvre ton prochain anime préféré.</p>
+        <p class="copyright">© 2026 ANIMEVERSE</p>
+    </footer>
+
+    <script src="{% static 'script.js' %}" defer></script>
+</body>
+</html>

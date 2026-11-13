@@ -1,0 +1,89 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANIMEVERSE | Univers Anime</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header class="navbar">
+        <a href="#" class="logo">ANIME<span>VERSE</span></a>
+
+        <nav>
+            <a href="#accueil">Accueil</a>
+            <a href="#catalogue">Catalogue</a>
+            <a href="#genres">Genres</a>
+            <a href="#favoris">Favoris</a>
+        </nav>
+
+        <div class="nav-actions">
+            <button id="searchButton" class="search-button">⌕</button>
+            <a href="http://127.0.0.1:8000/profil/" class="profile-button">Mon profil</a>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero" id="accueil">
+            <div class="hero-content">
+                <span class="eyebrow">BIENVENUE DANS UN AUTRE UNIVERS</span>
+                <h1>TON UNIVERS<br><span>ANIME</span></h1>
+                <p>Découvre de nouveaux mondes, rencontre des héros
+                   légendaires et trouve ton prochain anime préféré.</p>
+                <div class="hero-buttons">
+                    <a href="#catalogue" class="primary-button">Explorer les animes</a>
+                    <a href="#genres" class="secondary-button">Découvrir les genres</a>
+                </div>
+            </div>
+            <div class="hero-decoration">アニメ</div>
+        </section>
+
+        <section class="section" id="catalogue">
+            <div class="section-heading">
+                <div>
+                    <span class="eyebrow">TON PROCHAIN COUP DE CŒUR</span>
+                    <h2>Catalogue <span>Anime</span></h2>
+                </div>
+                <input id="animeSearch" type="search" placeholder="Rechercher un anime...">
+            </div>
+
+            <div class="filters" id="genres">
+                <button class="filter active" data-genre="all">Tous</button>
+                <button class="filter" data-genre="Action">Action</button>
+                <button class="filter" data-genre="Adventure">Aventure</button>
+                <button class="filter" data-genre="Comedy">Comédie</button>
+                <button class="filter" data-genre="Fantasy">Fantasy</button>
+                <button class="filter" data-genre="Romance">Romance</button>
+            </div>
+
+            <div id="animeGrid" class="anime-grid">
+                <p class="loading">Chargement des animes...</p>
+            </div>
+        </section>
+
+        <section class="section favorites-section" id="favoris">
+            <div class="section-heading">
+                <div>
+                    <span class="eyebrow">TA COLLECTION PERSONNELLE</span>
+                    <h2>Mes <span>Favoris</span></h2>
+                </div>
+            </div>
+            <div id="favoritesGrid" class="anime-grid">
+                <p class="empty-message">Ajoute des animes à tes favoris pour les retrouver ici.</p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <a href="#" class="logo">ANIME<span>VERSE</span></a>
+        <p>Explore. Découvre. Vis l'aventure.</p>
+        <p class="copyright">© 2026 ANIMEVERSE</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
