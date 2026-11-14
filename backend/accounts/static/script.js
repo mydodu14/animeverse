@@ -41,7 +41,7 @@ loadMoreButton.style.padding = "14px 30px";
 
 animeGrid.insertAdjacentElement("afterend", loadMoreButton);
 
-loadMoreButton.addEventListener("click", loadMoreAnime);
+loadMoreButton.addEventListener("click", () => loadMoreAnime());
 
 // Requête AniList
 async function fetchAnimePage(page) {
@@ -145,7 +145,6 @@ function normalizeAnime(anime) {
 async function loadAnime() {
     if (isLoading) return;
 
-    isLoading = true;
     currentPage = 0;
     allAnime = [];
 
@@ -154,15 +153,9 @@ async function loadAnime() {
 
     loadMoreButton.style.display = "none";
 
-    try {
-        await loadMoreAnime(true);
-        displayFavorites();
-    } catch (error) {
-        console.error(error);
-        showLoadingError();
-    } finally {
-        isLoading = false;
-    }
+    await loadMoreAnime(true);
+
+    displayFavorites();
 }
 
 // Charger une page supplémentaire
@@ -171,7 +164,6 @@ async function loadMoreAnime(initial = false) {
 
     isLoading = true;
 
-    const oldText = loadMoreButton.textContent;
     loadMoreButton.textContent = "Chargement...";
     loadMoreButton.disabled = true;
 
@@ -527,4 +519,5 @@ document.addEventListener("keydown", event => {
 
 // Démarrage
 displayFavorites();
+console.log("ANIMEVERSE : démarrage du chargement");
 loadAnime();
