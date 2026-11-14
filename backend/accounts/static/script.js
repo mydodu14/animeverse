@@ -1,5 +1,6 @@
 
 const API_URL = "/api/animes/";
+const FRANIME_URL = "https://franime.fr/";
 
 const animeGrid = document.getElementById("animeGrid");
 const favoritesGrid = document.getElementById("favoritesGrid");
@@ -12,7 +13,7 @@ let favorites = [];
 let selectedGenre = "all";
 let searchTimeout = null;
 
-// Charger les favoris sauvegardés
+// Charger les favoris
 try {
     favorites = JSON.parse(
         localStorage.getItem("animeverse_favorites") || "[]"
@@ -21,27 +22,12 @@ try {
     favorites = [];
 }
 
-// Construire le lien de recherche Crunchyroll
-function getCrunchyrollUrl(anime) {
-    const title =
-        anime.title_english ||
-        anime.title ||
-        anime.title_japanese ||
-        "Anime";
-
-    return `https://www.crunchyroll.com/search?q=${encodeURIComponent(title)}`;
+// Lien vers FR Anime
+function getFRAnimeUrl() {
+    return FRANIME_URL;
 }
 
-// Ouvrir Crunchyroll dans un nouvel onglet
-function openCrunchyroll(anime) {
-    window.open(
-        getCrunchyrollUrl(anime),
-        "_blank",
-        "noopener,noreferrer"
-    );
-}
-
-// Charger le catalogue
+// Charger les animes
 async function loadAnime() {
     animeGrid.innerHTML =
         '<p class="loading">Chargement des animes...</p>';
@@ -113,7 +99,7 @@ function createAnimeCard(anime) {
     const actions = document.createElement("div");
     actions.className = "anime-actions";
 
-    // Bouton Découvrir
+    // Bouton découvrir
     const detailsButton = document.createElement("button");
     detailsButton.className = "details-button";
     detailsButton.textContent = "Découvrir";
@@ -122,17 +108,15 @@ function createAnimeCard(anime) {
         showAnimeDetails(anime);
     });
 
-    // Bouton Crunchyroll sur chaque carte
-    const crunchyrollButton = document.createElement("a");
-
-    crunchyrollButton.className = "details-button";
-    crunchyrollButton.href = getCrunchyrollUrl(anime);
-    crunchyrollButton.target = "_blank";
-    crunchyrollButton.rel = "noopener noreferrer";
-    crunchyrollButton.textContent = "▶ Crunchyroll";
-
-    crunchyrollButton.style.textAlign = "center";
-    crunchyrollButton.style.textDecoration = "none";
+    // Bouton FR Anime
+    const franimeButton = document.createElement("a");
+    franimeButton.className = "details-button";
+    franimeButton.href = getFRAnimeUrl();
+    franimeButton.target = "_blank";
+    franimeButton.rel = "noopener noreferrer";
+    franimeButton.textContent = "▶ FR Anime";
+    franimeButton.style.textAlign = "center";
+    franimeButton.style.textDecoration = "none";
 
     // Bouton favoris
     const favoriteButton = document.createElement("button");
@@ -146,7 +130,7 @@ function createAnimeCard(anime) {
 
     actions.append(
         detailsButton,
-        crunchyrollButton,
+        franimeButton,
         favoriteButton
     );
 
@@ -156,7 +140,7 @@ function createAnimeCard(anime) {
     return card;
 }
 
-// Mettre à jour le bouton favoris
+// Actualiser le bouton favoris
 function updateFavoriteButton(button, anime) {
     const isFavorite = favorites.some(
         item => item.mal_id === anime.mal_id
@@ -189,7 +173,6 @@ function showAnimeDetails(anime) {
         url("${imageUrl}")
     `;
 
-    // Fermer
     const close = document.createElement("button");
     close.className = "netflix-close";
     close.textContent = "✕";
@@ -197,16 +180,13 @@ function showAnimeDetails(anime) {
 
     close.addEventListener("click", () => modal.remove());
 
-    // Badge
     const badge = document.createElement("span");
     badge.className = "netflix-badge";
     badge.textContent = "ANIMEVERSE";
 
-    // Titre
     const title = document.createElement("h1");
     title.textContent = anime.title || "Anime";
 
-    // Informations
     const meta = document.createElement("div");
     meta.className = "netflix-meta";
 
@@ -222,7 +202,6 @@ function showAnimeDetails(anime) {
 
     meta.append(rating, episode);
 
-    // Genres
     const genreText = document.createElement("p");
     genreText.className = "netflix-genres";
 
@@ -230,7 +209,6 @@ function showAnimeDetails(anime) {
         .map(genre => genre.name)
         .join(" • ") || "Genres inconnus";
 
-    // Description
     const description = document.createElement("p");
     description.className = "netflix-description";
 
@@ -238,27 +216,24 @@ function showAnimeDetails(anime) {
         ? anime.description.replace(/<[^>]*>/g, "")
         : anime.synopsis || "Aucune description disponible.";
 
-    // Boutons
     const buttons = document.createElement("div");
     buttons.className = "netflix-buttons";
 
-    // Bouton Regarder sur Crunchyroll
-    const official = document.createElement("a");
+    // Bouton FR Anime dans les détails
+    const franimeButton = document.createElement("a");
+    franimeButton.className = "netflix-watch";
+    franimeButton.href = getFRAnimeUrl();
+    franimeButton.target = "_blank";
+    franimeButton.rel = "noopener noreferrer";
+    franimeButton.textContent = "▶ Regarder sur FR Anime";
 
-    official.className = "netflix-watch";
-    official.href = getCrunchyrollUrl(anime);
-    official.target = "_blank";
-    official.rel = "noopener noreferrer";
-    official.textContent = "▶ Regarder sur Crunchyroll";
-
-    // Bouton Fermer
     const closeButton = document.createElement("button");
     closeButton.className = "netflix-secondary";
     closeButton.textContent = "Fermer";
 
     closeButton.addEventListener("click", () => modal.remove());
 
-    buttons.append(official, closeButton);
+    buttons.append(franimeButton, closeButton);
 
     content.append(
         close,
@@ -315,7 +290,7 @@ function displayFavorites() {
     });
 }
 
-// Afficher le catalogue
+// Afficher les animes
 function displayAnime(animes) {
     animeGrid.innerHTML = "";
 
@@ -355,7 +330,7 @@ function applyFilters() {
     displayAnime(filtered);
 }
 
-// Filtres par genre
+// Cliquer sur les filtres
 filters.forEach(button => {
     button.addEventListener("click", () => {
         filters.forEach(item => item.classList.remove("active"));
@@ -367,7 +342,7 @@ filters.forEach(button => {
     });
 });
 
-// Recherche
+// Recherche en direct
 animeSearch.addEventListener("input", () => {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(applyFilters, 250);
