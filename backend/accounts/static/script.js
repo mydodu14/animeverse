@@ -1,5 +1,5 @@
 
-const API_URL = "https://api.jikan.moe/v4/top/anime?filter=bypopularity";
+const ANILIST_URL = "https://graphql.anilist.co";
 const FRANIME_URL = "https://franime.fr/";
 
 const animeGrid = document.getElementById("animeGrid");
@@ -13,6 +13,7 @@ let favorites = [];
 let selectedGenre = "all";
 let searchTimeout = null;
 
+// Charger les favoris
 try {
     favorites = JSON.parse(
         localStorage.getItem("animeverse_favorites") || "[]"
@@ -25,7 +26,110 @@ function wait(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Récupérer les 100 animes les plus populaires
+// Requête AniList
+async function fetchAnimePage(page) {
+    const query = `
+        query ($page: Int, $perPage: Int) {
+            Page(page: $page, perPage: $perPage) {
+                media(
+                    type: ANIME,
+                    sort: POPULARITY_DESC
+                ) {
+                    id
+                    idMal
+                    title {
+                        romaji
+                        english
+                    }
+                    coverImage {
+                        extraLarge
+                        large
+                    }
+                    averageScore
+                    episodes
+                    genres
+                    description(asHtml: false)
+                }
+            }
+        }
+    `;
+
+    const response = await fetch(ANILIST_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        },
+        body: JSON.stringify({
+            query,
+            variables: {
+                page,
+                perPage: 50
+            }
+        })
+    });
+
+    if (!response.ok) {
+        throw new Error("Erreur AniList : " + response.status);
+    }
+
+    const result = await response.json();
+
+    if (result.errors) {
+        throw new Error(result.errors[0].message);
+    }
+
+    if (!result.data?.Page?.media) {
+        throw new Error("Données AniList invalides");
+    }
+
+    return result.data.Page.media;
+}
+
+// Convertir les données AniList
+// dans le format utilisé par ANIMEVERSE
+function normalizeAnime(anime) {
+    const title =
+        anime.title?.romaji ||
+        anime.title?.english ||
+        "Sans titre";
+
+    const englishTitle =
+        anime.title?.english ||
+        anime.title?.romaji ||
+        "";
+
+    const image =
+        anime.coverImage?.extraLarge ||
+        anime.coverImage?.large ||
+        "";
+
+    const genres = (anime.genres || []).map(name => ({
+        name
+    }));
+
+    return {
+        mal_id: anime.idMal || `anilist-${anime.id}`,
+        anilist_id: anime.id,
+        title: title,
+        title_english: englishTitle,
+        images: {
+            jpg: {
+                large_image_url: image
+            }
+        },
+        score: anime.averageScore
+            ? Number((anime.averageScore / 10).toFixed(1))
+            : null,
+        episodes: anime.episodes,
+        genres: genres,
+        synopsis: anime.description
+            ? anime.description.replace(/<[^>]*>/g, "")
+            : "Aucune description disponible."
+    };
+}
+
+// Charger les 100 animes populaires
 async function loadAnime() {
     animeGrid.innerHTML =
         '<p class="loading">Chargement des 100 animes populaires...</p>';
@@ -33,26 +137,15 @@ async function loadAnime() {
     try {
         const animeList = [];
 
-        for (let page = 1; page <= 4; page++) {
-            const response = await fetch(
-                `${API_URL}&page=${page}&limit=25`
+        for (let page = 1; page <= 2; page++) {
+            const results = await fetchAnimePage(page);
+
+            animeList.push(
+                ...results.map(normalizeAnime)
             );
 
-            if (!response.ok) {
-                throw new Error("Erreur API : " + response.status);
-            }
-
-            const result = await response.json();
-
-            if (!Array.isArray(result.data)) {
-                throw new Error("Données invalides");
-            }
-
-            animeList.push(...result.data);
-
-            // Éviter d'envoyer trop de requêtes rapidement
-            if (page < 4) {
-                await wait(1200);
+            if (page < 2) {
+                await wait(1000);
             }
         }
 
@@ -61,21 +154,27 @@ async function loadAnime() {
         displayAnime(allAnime);
         displayFavorites();
 
+        console.log("ANIMEVERSE : " + allAnime.length + " animes chargés.");
+
     } catch (error) {
-        console.error(error);
+        console.error("Erreur de chargement :", error);
 
         animeGrid.innerHTML = `
             <p class="error-message">
                 Impossible de charger les animes.
+                Vérifie ta connexion Internet.
             </p>
-            <button class="details-button" onclick="loadAnime()">
+            <button class="details-button" id="retryAnime">
                 Réessayer
             </button>
         `;
+
+        document.getElementById("retryAnime")
+            .addEventListener("click", loadAnime);
     }
 }
 
-// Créer une carte
+// Créer une carte anime
 function createAnimeCard(anime) {
     const card = document.createElement("article");
     card.className = "anime-card";
@@ -148,23 +247,29 @@ function createAnimeCard(anime) {
     return card;
 }
 
-// Favoris
-function updateFavoriteButton(button, anime) {
-    const isFavorite = favorites.some(
-        item => item.mal_id === anime.mal_id
+// Vérifier si un anime est en favori
+function isFavorite(anime) {
+    return favorites.some(
+        item => String(item.mal_id) === String(anime.mal_id)
     );
-
-    button.textContent = isFavorite ? "♥" : "♡";
-    button.classList.toggle("is-favorite", isFavorite);
 }
 
+// Mettre à jour le bouton favori
+function updateFavoriteButton(button, anime) {
+    const favorite = isFavorite(anime);
+
+    button.textContent = favorite ? "♥" : "♡";
+    button.classList.toggle("is-favorite", favorite);
+}
+
+// Ajouter ou retirer un favori
 function toggleFavorite(anime) {
-    const exists = favorites.some(
-        item => item.mal_id === anime.mal_id
-    );
+    const exists = isFavorite(anime);
 
     favorites = exists
-        ? favorites.filter(item => item.mal_id !== anime.mal_id)
+        ? favorites.filter(
+            item => String(item.mal_id) !== String(anime.mal_id)
+        )
         : [...favorites, anime];
 
     localStorage.setItem(
@@ -176,7 +281,7 @@ function toggleFavorite(anime) {
     applyFilters();
 }
 
-// Détails
+// Afficher les détails
 function showAnimeDetails(anime) {
     document.getElementById("animeModal")?.remove();
 
@@ -187,7 +292,8 @@ function showAnimeDetails(anime) {
     const content = document.createElement("div");
     content.className = "netflix-details";
 
-    const imageUrl = anime.images?.jpg?.large_image_url || "";
+    const imageUrl =
+        anime.images?.jpg?.large_image_url || "";
 
     content.style.backgroundImage = `
         linear-gradient(
@@ -315,7 +421,8 @@ function applyFilters() {
         const english = (anime.title_english || "").toLowerCase();
 
         const matchesSearch =
-            title.includes(search) || english.includes(search);
+            title.includes(search) ||
+            english.includes(search);
 
         const genres = (anime.genres || []).map(
             genre => genre.name.toLowerCase()
@@ -337,7 +444,7 @@ filters.forEach(button => {
         filters.forEach(item => item.classList.remove("active"));
 
         button.classList.add("active");
-        selectedGenre = button.dataset.genre;
+        selectedGenre = button.dataset.genre || "all";
 
         applyFilters();
     });
