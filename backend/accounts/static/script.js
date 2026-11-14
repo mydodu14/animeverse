@@ -2,6 +2,9 @@
 const ANILIST_URL = "https://graphql.anilist.co";
 const FRANIME_URL = "https://franime.fr/";
 
+const PER_PAGE = 50;
+const MAX_PAGES = 20;
+
 const animeGrid = document.getElementById("animeGrid");
 const favoritesGrid = document.getElementById("favoritesGrid");
 const animeSearch = document.getElementById("animeSearch");
@@ -12,8 +15,9 @@ let allAnime = [];
 let favorites = [];
 let selectedGenre = "all";
 let searchTimeout = null;
+let currentPage = 0;
+let isLoading = false;
 
-// Charger les favoris
 try {
     favorites = JSON.parse(
         localStorage.getItem("animeverse_favorites") || "[]"
@@ -25,6 +29,19 @@ try {
 function wait(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+// Bouton Charger plus
+const loadMoreButton = document.createElement("button");
+loadMoreButton.id = "loadMoreButton";
+loadMoreButton.className = "details-button";
+loadMoreButton.textContent = "Charger plus";
+loadMoreButton.style.display = "none";
+loadMoreButton.style.margin = "30px auto";
+loadMoreButton.style.padding = "14px 30px";
+
+animeGrid.insertAdjacentElement("afterend", loadMoreButton);
+
+loadMoreButton.addEventListener("click", loadMoreAnime);
 
 // Requête AniList
 async function fetchAnimePage(page) {
@@ -64,7 +81,7 @@ async function fetchAnimePage(page) {
             query,
             variables: {
                 page,
-                perPage: 50
+                perPage: PER_PAGE
             }
         })
     });
@@ -86,8 +103,7 @@ async function fetchAnimePage(page) {
     return result.data.Page.media;
 }
 
-// Convertir les données AniList
-// dans le format utilisé par ANIMEVERSE
+// Conversion des données
 function normalizeAnime(anime) {
     const title =
         anime.title?.romaji ||
@@ -104,10 +120,6 @@ function normalizeAnime(anime) {
         anime.coverImage?.large ||
         "";
 
-    const genres = (anime.genres || []).map(name => ({
-        name
-    }));
-
     return {
         mal_id: anime.idMal || `anilist-${anime.id}`,
         anilist_id: anime.id,
@@ -122,59 +134,104 @@ function normalizeAnime(anime) {
             ? Number((anime.averageScore / 10).toFixed(1))
             : null,
         episodes: anime.episodes,
-        genres: genres,
+        genres: (anime.genres || []).map(name => ({ name })),
         synopsis: anime.description
             ? anime.description.replace(/<[^>]*>/g, "")
             : "Aucune description disponible."
     };
 }
 
-// Charger les 100 animes populaires
+// Charger la première page
 async function loadAnime() {
+    if (isLoading) return;
+
+    isLoading = true;
+    currentPage = 0;
+    allAnime = [];
+
     animeGrid.innerHTML =
-        '<p class="loading">Chargement des 100 animes populaires...</p>';
+        '<p class="loading">Chargement des animes...</p>';
+
+    loadMoreButton.style.display = "none";
 
     try {
-        const animeList = [];
-
-        for (let page = 1; page <= 2; page++) {
-            const results = await fetchAnimePage(page);
-
-            animeList.push(
-                ...results.map(normalizeAnime)
-            );
-
-            if (page < 2) {
-                await wait(1000);
-            }
-        }
-
-        allAnime = animeList;
-
-        displayAnime(allAnime);
+        await loadMoreAnime(true);
         displayFavorites();
-
-        console.log("ANIMEVERSE : " + allAnime.length + " animes chargés.");
-
     } catch (error) {
-        console.error("Erreur de chargement :", error);
-
-        animeGrid.innerHTML = `
-            <p class="error-message">
-                Impossible de charger les animes.
-                Vérifie ta connexion Internet.
-            </p>
-            <button class="details-button" id="retryAnime">
-                Réessayer
-            </button>
-        `;
-
-        document.getElementById("retryAnime")
-            .addEventListener("click", loadAnime);
+        console.error(error);
+        showLoadingError();
+    } finally {
+        isLoading = false;
     }
 }
 
-// Créer une carte anime
+// Charger une page supplémentaire
+async function loadMoreAnime(initial = false) {
+    if (isLoading || currentPage >= MAX_PAGES) return;
+
+    isLoading = true;
+
+    const oldText = loadMoreButton.textContent;
+    loadMoreButton.textContent = "Chargement...";
+    loadMoreButton.disabled = true;
+
+    try {
+        const nextPage = currentPage + 1;
+
+        const results = await fetchAnimePage(nextPage);
+        const newAnime = results.map(normalizeAnime);
+
+        if (initial) {
+            animeGrid.innerHTML = "";
+        }
+
+        allAnime.push(...newAnime);
+        currentPage = nextPage;
+
+        applyFilters();
+
+        loadMoreButton.style.display =
+            currentPage < MAX_PAGES ? "block" : "none";
+
+        loadMoreButton.textContent =
+            currentPage < MAX_PAGES
+                ? `Charger plus (${allAnime.length}/1000)`
+                : "Catalogue complet";
+
+        console.log(
+            `${allAnime.length} animes chargés sur 1000`
+        );
+
+    } catch (error) {
+        console.error("Erreur AniList :", error);
+
+        loadMoreButton.textContent = "Réessayer";
+        loadMoreButton.style.display = "block";
+
+        if (initial) {
+            showLoadingError();
+        }
+    } finally {
+        isLoading = false;
+        loadMoreButton.disabled = false;
+    }
+}
+
+function showLoadingError() {
+    animeGrid.innerHTML = `
+        <p class="error-message">
+            Impossible de charger les animes.
+        </p>
+        <button class="details-button" id="retryAnime">
+            Réessayer
+        </button>
+    `;
+
+    document.getElementById("retryAnime")
+        .addEventListener("click", loadAnime);
+}
+
+// Créer une carte
 function createAnimeCard(anime) {
     const card = document.createElement("article");
     card.className = "anime-card";
@@ -247,14 +304,13 @@ function createAnimeCard(anime) {
     return card;
 }
 
-// Vérifier si un anime est en favori
+// Favoris
 function isFavorite(anime) {
     return favorites.some(
         item => String(item.mal_id) === String(anime.mal_id)
     );
 }
 
-// Mettre à jour le bouton favori
 function updateFavoriteButton(button, anime) {
     const favorite = isFavorite(anime);
 
@@ -262,7 +318,6 @@ function updateFavoriteButton(button, anime) {
     button.classList.toggle("is-favorite", favorite);
 }
 
-// Ajouter ou retirer un favori
 function toggleFavorite(anime) {
     const exists = isFavorite(anime);
 
@@ -281,7 +336,7 @@ function toggleFavorite(anime) {
     applyFilters();
 }
 
-// Afficher les détails
+// Détails
 function showAnimeDetails(anime) {
     document.getElementById("animeModal")?.remove();
 
@@ -292,8 +347,7 @@ function showAnimeDetails(anime) {
     const content = document.createElement("div");
     content.className = "netflix-details";
 
-    const imageUrl =
-        anime.images?.jpg?.large_image_url || "";
+    const imageUrl = anime.images?.jpg?.large_image_url || "";
 
     content.style.backgroundImage = `
         linear-gradient(
@@ -382,7 +436,7 @@ function showAnimeDetails(anime) {
     document.body.appendChild(modal);
 }
 
-// Afficher les favoris
+// Favoris affichés
 function displayFavorites() {
     favoritesGrid.innerHTML = "";
 
@@ -397,7 +451,7 @@ function displayFavorites() {
     });
 }
 
-// Afficher le catalogue
+// Catalogue
 function displayAnime(animes) {
     animeGrid.innerHTML = "";
 
@@ -464,7 +518,7 @@ searchButton.addEventListener("click", () => {
     });
 });
 
-// Fermer la fenêtre avec Échap
+// Fermer les détails avec Échap
 document.addEventListener("keydown", event => {
     if (event.key === "Escape") {
         document.getElementById("animeModal")?.remove();
